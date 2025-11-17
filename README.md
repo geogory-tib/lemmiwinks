@@ -7,4 +7,5 @@ Everything is sent using JSON objects so it should be easy to make a client from
 
 ## Todo
 1. Add TLS support. As of now everything is plain text but once I get all the small kinks worked out TLS will be added tho this thing
-2. Add support for websockect connections. So people can use web clients if they want, but I hate the web so I might not do that.
+2. Create a client. I plan on making a terminal client in go and a GUI client in either C or Odin.   
+3. Add support for websockect connections. So people can use web clients if they want, but I hate the web so I might not do that.
