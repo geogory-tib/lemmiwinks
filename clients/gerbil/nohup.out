@@ -1,0 +1,16 @@
+ERROR [neovide::settings::config] Could not watch config file, chances are it just doesn't exist: No path was found. about ["/home/john/.config/neovide"]
+ERROR [neovide::bridge::session] ]4;241;#5eb7ffNvim: Caught deadly signal 'SIGHUP'
+ERROR [neovide::bridge::session] Nvim: preserving files...
+ERROR [neovide::bridge::session] Nvim: Finished.
+ERROR [neovide::bridge::ui_commands] FocusGained failed
+
+Caused by:
+    0: Error decoding response to request 'nvim_ui_set_focus'
+    1: Error while reading from Reader
+    2: EOF
+ERROR [neovide::bridge::ui_commands] FocusLost failed
+
+Caused by:
+    0: Error decoding response to request 'nvim_ui_set_focus'
+    1: Error while reading from Reader
+    2: EOF
