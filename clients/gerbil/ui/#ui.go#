@@ -122,6 +122,8 @@ type Contacts_Bar struct {
 type Input_Box struct {
 	Shape Rectangle
 	Input string
+	Cursor Vector2
+	Cursor tcell.Color
 }
 
 func New_Rectangle(x, y, L, W int, outline, inside tcell.Color) (ret Rectangle) {

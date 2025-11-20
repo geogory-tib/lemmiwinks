@@ -2,7 +2,6 @@ package util
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"log"
 	"runtime"
@@ -31,8 +30,6 @@ func ReadFullJson(reader io.Reader, buffer []byte) (int, error) {
 }
 
 func Todo() {
-	fmt.Println("INFO: This Has yet to be Implmented yet!")
-	pc, file, line, _ := runtime.Caller(0)
-	log.Panicf("INFO: PC: %p, FILE: %s, LINE: %d\n", pc, file, line)
-
+	pc, file, line, _ := runtime.Caller(1)
+	log.Panicf("This has yet to be implemented yet: PC: %x, FILE: %s, LINE: %d\n", pc, file, line)
 }
