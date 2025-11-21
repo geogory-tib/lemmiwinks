@@ -3,7 +3,6 @@ package main
 import (
 	"gerbil/ui"
 	"log"
-	"strings"
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -39,17 +38,16 @@ func main() {
 	}
 	app_screen.SetStyle(tcell.StyleDefault)
 	app_screen.Clear()
-	message_box := ui.New_Message_Display_Box(0,0,60,60,tcell.ColorGreen,tcell.ColorGray)
-	stuff_to_append := strings.Split(LONG_EXAMPLE_TEXT,"\n")
-	message_box.Contents = append(message_box.Contents,stuff_to_append...)
-	message_box.Scroll_Offset = 4
-	message_box.Render(app_screen)
+	input_box := ui.New_Input_Box(0,0,50,50,tcell.ColorLightGrey,tcell.ColorBlue)
+	input_box.Render(app_screen)
 	app_screen.Show()
 	for {
 		event := app_screen.PollEvent()
 		switch a := event.(type) {
 		case *tcell.EventKey:
-			a.Name()
+			if a.Rune() == 'i'{
+				input_box.Get_Input(app_screen)
+			}
 			return
 		}
 	}

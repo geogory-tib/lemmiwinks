@@ -1,7 +1,7 @@
 package ui
-
 import (
 	"github.com/gdamore/tcell/v2"
+	"slices"
 )
 
 var RenderNewLines bool // will make a new line if a newline is present
@@ -121,8 +121,113 @@ type Contacts_Bar struct {
 }
 type Input_Box struct {
 	Shape Rectangle
-	Input string
+	Input []rune
+	Cursor_pos int
+	Cursor_cords Vector2
+	ESC_PRESSED bool
 }
+
+func (box Input_Box)Render(app_scrn tcell.Screen){
+	box.Shape.Render(app_scrn)
+	X := 1
+	Y := 1
+	for _, ch := range box.Input{
+		if X > box.Shape.Size.Y || ch == '\n' && RenderNewLines{
+			X = 1
+			Y++
+		}
+		app_scrn.SetContent((X+box.Shape.Pos.X),(Y + box.Shape.Pos.Y),ch,nil,tcell.StyleDefault.Background(box.Shape.Inside_Color))
+		X++
+	}
+	app_scrn.Show()
+}
+
+func (box *Input_Box)Get_Input(app_scrn tcell.Screen) string{
+	app_scrn.ShowCursor((box.Shape.Pos.X + 1),(box.Shape.Pos.Y + 1))
+	box.Cursor_cords = Vector2{box.Shape.Pos.X + 1,box.Shape.Pos.Y + 1}
+	for{
+		ev := app_scrn.PollEvent()
+		switch ev_type := ev.(type){
+			case *tcell.EventKey:
+			{
+				if key := ev_type.Key(); key != tcell.KeyRune{
+					box.handle_control_keys(app_scrn,key)
+					if box.ESC_PRESSED{
+						return string(box.Input)
+					}
+				}else{
+				char := ev_type.Rune()
+				box.handle_runes(app_scrn,char)
+				}
+				box.Render(app_scrn)
+				app_scrn.ShowCursor(box.Cursor_cords.X,box.Cursor_cords.Y)
+			}
+
+		}
+	}
+}
+func (box *Input_Box)handle_runes(app_scrn tcell.Screen,char rune){
+	if box.Cursor_pos == len(box.Input){
+		box.Input = append(box.Input,char)
+		box.Cursor_pos++
+		box.Cursor_cords.X++
+	}else{
+		box.Input = slices.Insert(box.Input,box.Cursor_pos,char)
+		box.Cursor_pos++
+		box.Cursor_cords.X++
+	}
+	if box.Cursor_cords.X > box.Shape.Size.Y{
+		box.Cursor_cords.Y++
+	}else if box.Cursor_cords.X < box.Shape.Pos.X{
+		box.Cursor_cords.Y--
+	}
+	if box.Cursor_cords.X > box.Shape.Size.Y{
+		box.Cursor_cords.Y++
+		box.Cursor_cords.X = 1
+	}
+}
+
+func (box *Input_Box)handle_control_keys(app_scrn tcell.Screen,key tcell.Key){
+	switch key{
+		case tcell.KeyEnter:
+		{
+			if box.Cursor_pos >= len(box.Input){
+				box.Input = append(box.Input,'\n')
+			}else{
+				box.Input = slices.Insert(box.Input,box.Cursor_pos,'\n')
+			}
+			app_scrn.Show()
+			return
+		}
+		case tcell.KeyLeft:
+		{
+			box.Cursor_cords.X--
+			box.Cursor_pos--
+		}
+		case tcell.KeyRight:
+		{
+			box.Cursor_cords.X++
+			box.Cursor_pos++
+		}
+		case tcell.KeyEsc:{
+			{
+			box.ESC_PRESSED= true
+			return
+			}
+		}
+		default:
+		{
+			return
+		}
+	}
+	if box.Cursor_cords.X > box.Shape.Size.Y{
+		box.Cursor_cords.Y++
+	}else if box.Cursor_cords.X < box.Shape.Pos.X{
+		box.Cursor_cords.Y--
+	}
+}
+
+
 
 func New_Rectangle(x, y, L, W int, outline, inside tcell.Color) (ret Rectangle) {
 	ret.Pos.X = x
@@ -150,5 +255,15 @@ func New_Message_Display_Box(x,y,L,W int, outline,inside tcell.Color)(ret Messag
 	ret.Shape.Size.Y = W
 	ret.Shape.Inside_Color = inside
 	ret.Shape.Outline_Color = outline
+	return
+}
+func New_Input_Box(x,y,L,W int, outline,inside tcell.Color) (ret Input_Box){
+	ret.Input = make([]rune,0,4096)
+	ret.Shape.Pos.X = x
+	ret.Shape.Pos.Y = y
+	ret.Shape.Size.X = L
+	ret.Shape.Size.Y = W
+	ret.Shape.Outline_Color = outline
+	ret.Shape.Inside_Color = inside
 	return
 }
