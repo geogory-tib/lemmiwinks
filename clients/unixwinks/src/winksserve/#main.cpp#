@@ -1,0 +1,15 @@
+#include <cjson/cJSON.h>
+#include "../include/gtd.h"
+
+struct config_t {
+  cslice<char> username;
+  cslice<char> password;
+  cslice<char> serverandport;
+};
+
+int main(int argc, char **argv) {
+  garena arena = garena_new(4096);
+  config_t config;
+  
+  return 0;
+}

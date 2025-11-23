@@ -1,3 +1,4 @@
+
 package ui
 import (
 	"github.com/gdamore/tcell/v2"
@@ -163,6 +164,7 @@ func (box *Input_Box)Get_Input(scrn tcell.Screen) []rune{
 				}
 				
 			}
+			scrn.ShowCursor(box.Shape.Pos.X + 1, box.Shape.Pos.Y + 1)
 			box.Render(scrn)
 		}
 	}
