@@ -38,7 +38,10 @@ func main() {
 	}
 	app_screen.SetStyle(tcell.StyleDefault)
 	app_screen.Clear()
+	ui.RenderNewLines = true
 	input_box := ui.New_Input_Box(0,0,50,50,tcell.ColorLightGrey,tcell.ColorBlue)
+	input_box.Input[0] = []rune("Hello This is a string\n")
+	input_box.Input[1] = []rune("Hi")
 	input_box.Render(app_screen)
 	app_screen.Show()
 	for {

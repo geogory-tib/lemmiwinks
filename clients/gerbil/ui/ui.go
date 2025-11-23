@@ -121,112 +121,141 @@ type Contacts_Bar struct {
 }
 type Input_Box struct {
 	Shape Rectangle
-	Input []rune
-	Cursor_pos int
-	Cursor_cords Vector2
+	Input [][]rune
+	Cursor_pos Vector2
 	ESC_PRESSED bool
+	Scroll_Offset int
 }
 
 func (box Input_Box)Render(app_scrn tcell.Screen){
 	box.Shape.Render(app_scrn)
 	X := 1
 	Y := 1
-	for _, ch := range box.Input{
-		if X > box.Shape.Size.Y || ch == '\n' && RenderNewLines{
-			X = 1
-			Y++
+	render_text := box.Input[box.Scroll_Offset:]
+	for _,str := range render_text{
+		for _ ,ch := range str{
+			app_scrn.SetContent((X + box.Shape.Pos.X),(Y + box.Shape.Pos.Y),ch,nil,tcell.StyleDefault.Background(box.Shape.Inside_Color))
+			X++
 		}
-		app_scrn.SetContent((X+box.Shape.Pos.X),(Y + box.Shape.Pos.Y),ch,nil,tcell.StyleDefault.Background(box.Shape.Inside_Color))
-		X++
+		Y++
+		if Y == (box.Shape.Pos.Y + box.Shape.Size.X - 1){
+			break
+		}
 	}
 	app_scrn.Show()
 }
-
-func (box *Input_Box)Get_Input(app_scrn tcell.Screen) string{
-	app_scrn.ShowCursor((box.Shape.Pos.X + 1),(box.Shape.Pos.Y + 1))
-	box.Cursor_cords = Vector2{box.Shape.Pos.X + 1,box.Shape.Pos.Y + 1}
-	for{
-		ev := app_scrn.PollEvent()
-		switch ev_type := ev.(type){
+func (box *Input_Box)Get_Input(scrn tcell.Screen) []rune{
+	scrn.ShowCursor(box.Shape.Pos.X + 1, box.Shape.Pos.Y + 1)
+	box.Render(scrn)
+	for {
+		ev := scrn.PollEvent()
+		switch event :=  ev.(type){
 			case *tcell.EventKey:
-			{
-				if key := ev_type.Key(); key != tcell.KeyRune{
-					box.handle_control_keys(app_scrn,key)
-					if box.ESC_PRESSED{
-						return string(box.Input)
-					}
-				}else{
-				char := ev_type.Rune()
-				box.handle_runes(app_scrn,char)
+			key := event.Key()
+			if key == tcell.KeyRune{
+				ch := event.Rune()
+				box.handle_rune(ch)
+				
+			}else{
+				box.handle_control_keys(scrn,key)
+				if box.ESC_PRESSED{
+					return slices.Concat(box.Input...)
 				}
-				box.Render(app_scrn)
-				app_scrn.ShowCursor(box.Cursor_cords.X,box.Cursor_cords.Y)
+				
 			}
-
+			box.Render(scrn)
 		}
 	}
 }
-func (box *Input_Box)handle_runes(app_scrn tcell.Screen,char rune){
-	if box.Cursor_pos == len(box.Input){
-		box.Input = append(box.Input,char)
-		box.Cursor_pos++
-		box.Cursor_cords.X++
-	}else{
-		box.Input = slices.Insert(box.Input,box.Cursor_pos,char)
-		box.Cursor_pos++
-		box.Cursor_cords.X++
-	}
-	if box.Cursor_cords.X > box.Shape.Size.Y{
-		box.Cursor_cords.Y++
-	}else if box.Cursor_cords.X < box.Shape.Pos.X{
-		box.Cursor_cords.Y--
-	}
-	if box.Cursor_cords.X > box.Shape.Size.Y{
-		box.Cursor_cords.Y++
-		box.Cursor_cords.X = 1
+func (box *Input_Box)handle_rune(ch rune){
+	renderable_text := box.Input[box.Scroll_Offset:]
+	current_line := renderable_text[box.Cursor_pos.Y]
+	if box.Cursor_pos.X - 1 >= len(current_line){
+		if len(current_line) + 1 >= box.Shape.Size.Y - 1{
+			next_line := renderable_text[box.Cursor_pos.Y]
+			next_line = slices.Insert(next_line,0,ch)
+			box.Cursor_pos.X = 1
+			box.Cursor_pos.Y++
+			return
+		}
+		current_line = append(current_line,ch)
+		box.Cursor_pos.X++ 
+	}else if box.Cursor_pos.X - 1 < len(current_line){
+		if len(current_line) + 1 >= box.Shape.Size.Y - 1{
+			next_line := renderable_text[box.Cursor_pos.Y]
+			next_line = slices.Insert(next_line,0,current_line[len(current_line) - 1])
+			box.Cursor_pos.X = 1
+			box.Cursor_pos.Y++
+			return
+		}
+		current_line = slices.Insert(current_line,box.Cursor_pos.Y,ch)
 	}
 }
-
-func (box *Input_Box)handle_control_keys(app_scrn tcell.Screen,key tcell.Key){
+func (box *Input_Box)handle_control_keys(scrn tcell.Screen, key tcell.Key){
+	renderable_text := box.Input[box.Scroll_Offset:]
 	switch key{
+		case tcell.KeyESC:
+		{
+			box.ESC_PRESSED = true
+			scrn.HideCursor()
+			return
+		}
 		case tcell.KeyEnter:
 		{
-			if box.Cursor_pos >= len(box.Input){
-				box.Input = append(box.Input,'\n')
+			current_line := renderable_text[box.Cursor_pos.Y]
+			if box.Cursor_pos.X >= len(current_line){
+				current_line = append(current_line,'\n')
+				box.Cursor_pos.X = 1
+				box.Cursor_pos.Y++
 			}else{
-				box.Input = slices.Insert(box.Input,box.Cursor_pos,'\n')
+				next_line := renderable_text[box.Cursor_pos.Y]
+				if len(next_line) == 0{
+					next_line = append(next_line,current_line[box.Cursor_pos.X:]...)
+					current_line = current_line[:box.Cursor_pos.X]
+					current_line = append(current_line,'\n')
+					box.Cursor_pos.X = 1
+					box.Cursor_pos.Y++
+				}else{
+					next_line = slices.Insert(next_line,0,current_line[box.Cursor_pos.X:]...)
+					current_line = current_line[:box.Cursor_pos.X]
+					current_line = append(current_line,'\n')
+					box.Cursor_pos.X = 1
+					box.Cursor_pos.Y++
+				}
 			}
-			app_scrn.Show()
-			return
 		}
 		case tcell.KeyLeft:
 		{
-			box.Cursor_cords.X--
-			box.Cursor_pos--
+			box.Cursor_pos.X--
+			if box.Cursor_pos.X == box.Shape.Pos.X{
+				box.Cursor_pos.Y--
+				box.Cursor_pos.X = len(renderable_text[box.Cursor_pos.Y])
+			}
 		}
 		case tcell.KeyRight:
 		{
-			box.Cursor_cords.X++
-			box.Cursor_pos++
-		}
-		case tcell.KeyEsc:{
-			{
-			box.ESC_PRESSED= true
-			return
+			box.Cursor_pos.X++
+			if box.Cursor_pos.X == box.Shape.Size.Y - 1{
+				box.Cursor_pos.Y++
+				box.Cursor_pos.X = 1
 			}
 		}
-		default:
+		case tcell.KeyUp:
 		{
-			return
+			box.Cursor_pos.Y--
+			if box.Cursor_pos.Y <= box.Shape.Pos.Y && box.Scroll_Offset > 0{
+				box.Scroll_Offset--
+			}
+		}
+		case tcell.KeyDown:
+		{
+			box.Cursor_pos.Y++
+			if box.Cursor_pos.Y >= (box.Shape.Pos.Y + box.Shape.Size.X) && box.Scroll_Offset < len(box.Input){
+				box.Scroll_Offset--
+			}
 		}
 	}
-	if box.Cursor_cords.X > box.Shape.Size.Y{
-		box.Cursor_cords.Y++
-	}else if box.Cursor_cords.X < box.Shape.Pos.X{
-		box.Cursor_cords.Y--
-	}
 }
-
 
 
 func New_Rectangle(x, y, L, W int, outline, inside tcell.Color) (ret Rectangle) {
@@ -258,7 +287,10 @@ func New_Message_Display_Box(x,y,L,W int, outline,inside tcell.Color)(ret Messag
 	return
 }
 func New_Input_Box(x,y,L,W int, outline,inside tcell.Color) (ret Input_Box){
-	ret.Input = make([]rune,0,4096)
+	ret.Input = make([][]rune,100)
+	for i := range len(ret.Input){
+		ret.Input[i] = make([]rune,0,50)
+	}
 	ret.Shape.Pos.X = x
 	ret.Shape.Pos.Y = y
 	ret.Shape.Size.X = L
